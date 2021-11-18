@@ -12,18 +12,14 @@
 
 @implementation Transport : NSObject
 
--(instancetype)initWithNativeTransport:(NSValue *)nativeTransport {
+-(instancetype)initWithNativeTransport:(NSValue *)nativeTransport pcFactory:(RTCPeerConnectionFactory *)pcFactory {
     self = [super init];
     if (self) {
-        __nativeTransport = [nativeTransport retain];
+        self._nativeTransport = nativeTransport;
+        self._pcFactory = pcFactory;
     }
     
     return self;
-}
-
--(void)dealloc {
-    [__nativeTransport release];
-    [super dealloc];
 }
 
 -(NSString *)getId {

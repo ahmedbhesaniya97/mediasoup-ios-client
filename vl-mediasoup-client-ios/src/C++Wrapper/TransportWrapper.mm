@@ -118,7 +118,10 @@ using namespace mediasoupclient;
     return [NSValue valueWithPointer:[TransportWrapper extractNativeTransport:nativeTransport]];
 }
 
-+(::Producer *)nativeProduce:(NSValue *)nativeTransport listener:(id<ProducerListener>)listener track:(NSUInteger)mediaTrack encodings:(NSArray *)encodings codecOptions:(NSString *)codecOptions appData:(NSString *)appData {
++(::Producer *)nativeProduce:(NSValue *)nativeTransport listener:(id<ProducerListener>)listener
+    pcFactory:(RTCPeerConnectionFactory *)pcFactory track:(NSUInteger)mediaTrack
+    encodings:(NSArray *)encodings codecOptions:(NSString *)codecOptions appData:(NSString *)appData {
+
     MSC_TRACE();
     
     try {
@@ -156,17 +159,21 @@ using namespace mediasoupclient;
         if (appData != nullptr) {
             appDataJson = nlohmann::json::parse(std::string([appData UTF8String]));
         }
-        
-        mediasoupclient::SendTransport *transport = reinterpret_cast<mediasoupclient::SendTransport *>([nativeTransport pointerValue]);
-        
+
+        auto const ownedTransport = reinterpret_cast<OwnedSendTransport *>([nativeTransport pointerValue]);
+        auto const transport = ownedTransport->transport();
+
         mediasoupclient::Producer *nativeProducer;
         
         // Prevent sdp error when called at the same time on multiple threads (a=mid)
         @synchronized (self) {
             nativeProducer = transport->Produce(producerListener, mediaStreamTrack, &encodingsVector, &codecOptionsJson, appDataJson);
         }
-        
-        ::Producer *producer = [[::Producer alloc] initWithNativeProducer:[NSValue valueWithPointer:new OwnedProducer(nativeProducer, producerListener)]];
+
+        auto ownedProducer = new OwnedProducer(nativeProducer, producerListener);
+        auto pOwnedProducer = [NSValue valueWithPointer:ownedProducer];
+        ::Producer *producer = [[::Producer alloc] initWithNativeProducer:pOwnedProducer pcFactory:pcFactory];
+
         producerListener->SetProducer(producer);
         
         return producer;
@@ -179,7 +186,11 @@ using namespace mediasoupclient;
     }
 }
 
-+(::Consumer *)nativeConsume:(NSValue *)nativeTransport listener:(id<ConsumerListener>)listener id:(NSString *)id producerId:(NSString *)producerId kind:(NSString *)kind rtpParameters:(NSString *)rtpParameters appData:(NSString *)appData {
++(::Consumer *)nativeConsume:(NSValue *)nativeTransport  listener:(id<ConsumerListener>)listener
+    pcFactory:(RTCPeerConnectionFactory *)pcFactory id:(NSString *)id
+    producerId:(NSString *)producerId kind:(NSString *)kind rtpParameters:(NSString *)rtpParameters
+    appData:(NSString *)appData {
+
     MSC_TRACE();
     
     try {
@@ -198,16 +209,19 @@ using namespace mediasoupclient;
         if (appData != nullptr) {
             appDataJson = nlohmann::json::parse(std::string([appData UTF8String]));
         }
-        
-        mediasoupclient::RecvTransport *transport = reinterpret_cast<mediasoupclient::RecvTransport *>([nativeTransport pointerValue]);
-        
+
+        auto const ownedTransport = reinterpret_cast<OwnedRecvTransport *>([nativeTransport pointerValue]);
+        auto const transport = ownedTransport->transport();
+
         mediasoupclient::Consumer *nativeConsumer;
         
         @synchronized(self) {
             nativeConsumer = transport->Consume(consumerListener, idString, producerIdString, kindString, &rtpParametersJson, appDataJson);
         }
-        
-        ::Consumer *consumer = [[::Consumer alloc] initWithNativeConsumer:[NSValue valueWithPointer:new OwnedConsumer(nativeConsumer, consumerListener)]];
+
+        auto ownedConsumer = new OwnedConsumer(nativeConsumer, consumerListener);
+        auto pOwnedConsumer = [NSValue valueWithPointer:ownedConsumer];
+        ::Consumer *consumer = [[::Consumer alloc] initWithNativeConsumer:pOwnedConsumer pcFactory:pcFactory];
         consumerListener->SetConsumer(consumer);
         
         return consumer;
@@ -221,10 +235,22 @@ using namespace mediasoupclient;
 }
 
 +(mediasoupclient::Transport *)extractNativeTransport:(NSValue *)nativeTransport {
-    mediasoupclient::Transport *transport = reinterpret_cast<mediasoupclient::Transport *>([nativeTransport pointerValue]);
+    auto const ownedTransport = reinterpret_cast<OwnedTransport *>([nativeTransport pointerValue]);
+    auto const transport = ownedTransport->transport();
+
     MSC_ASSERT(transport != nullptr, "native transport pointer null");
     
     return transport;
+}
+
++(void)nativeFreeSendTransport:(NSValue *)nativeTransport {
+    auto transport = reinterpret_cast<OwnedSendTransport *>([nativeTransport pointerValue]);
+    delete transport;
+}
+
++(void)nativeFreeRecvTransport:(NSValue *)nativeTransport {
+    auto transport = reinterpret_cast<OwnedRecvTransport *>([nativeTransport pointerValue]);
+    delete transport;
 }
 
 @end

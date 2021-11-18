@@ -7,6 +7,8 @@
 //
 
 #import "MediasoupDevice.h"
+#import "SendTransport.h"
+#import "RecvTransport.h"
 #import "DeviceWrapper.h"
 #import <libmediasoupclient/include/PeerConnection.hpp>
 #import "peerconnection/RTCPeerConnectionFactory+Private.h"
@@ -15,10 +17,10 @@
 using namespace mediasoupclient;
 
 @interface MediasoupDevice()
-@property(nonatomic, retain) NSValue *nativeDevice;
-@property(nonatomic, retain) RTCPeerConnectionFactoryBuilder *pcFactoryBuilder;
-@property(nonatomic, retain) RTCPeerConnectionFactory *pcFactory;
-@property(nonatomic, retain) NSValue *nativePCOptions;
+@property(nonatomic, strong) NSValue *nativeDevice;
+@property(nonatomic, strong) RTCPeerConnectionFactoryBuilder *pcFactoryBuilder;
+@property(nonatomic, strong) RTCPeerConnectionFactory *pcFactory;
+@property(nonatomic, strong) NSValue *nativePCOptions;
 @end
 
 @implementation MediasoupDevice : NSObject
@@ -51,8 +53,6 @@ using namespace mediasoupclient;
         delete reinterpret_cast<mediasoupclient::PeerConnection::Options *>(self.nativePCOptions.pointerValue);
     }
     self.nativePCOptions = nil;
-
-    [super dealloc];
 }
 
 -(void)load:(NSString *)routerRtpCapabilities {
@@ -91,9 +91,10 @@ using namespace mediasoupclient;
 -(SendTransport *)createSendTransport:(id<SendTransportListener>)listener id:(NSString *)id iceParameters:(NSString *)iceParameters iceCandidates:(NSString *)iceCandidates dtlsParameters:(NSString *)dtlsParameters sctpParameters:(NSString *)sctpParameters appData:(NSString *)appData {
     [self checkDeviceExists];
 
-    NSValue *transport = [DeviceWrapper nativeCreateSendTransport:self.nativeDevice listener:listener id:id iceParameters:iceParameters iceCandidates:iceCandidates dtlsParameters:dtlsParameters sctpParameters:sctpParameters nativePCOptions:self.nativePCOptions appData:appData];
-    
-    return [[[SendTransport alloc] initWithNativeTransport:transport] autorelease];
+    return [DeviceWrapper nativeCreateSendTransport:self.nativeDevice listener:listener
+        pcFactory:self.pcFactory id:id iceParameters:iceParameters iceCandidates:iceCandidates
+        dtlsParameters:dtlsParameters sctpParameters:sctpParameters
+        nativePCOptions:self.nativePCOptions appData:appData];
 }
 
 -(RecvTransport *)createRecvTransport:(id<RecvTransportListener>)listener id:(NSString *)id iceParameters:(NSString *)iceParameters iceCandidates:(NSString *)iceCandidates dtlsParameters:(NSString *)dtlsParameters {
@@ -103,9 +104,10 @@ using namespace mediasoupclient;
 -(RecvTransport *)createRecvTransport:(id<RecvTransportListener>)listener id:(NSString *)id iceParameters:(NSString *)iceParameters iceCandidates:(NSString *)iceCandidates dtlsParameters:(NSString *)dtlsParameters sctpParameters:(NSString *)sctpParameters appData:(NSString *)appData {
     [self checkDeviceExists];
     
-    NSValue *transport = [DeviceWrapper nativeCreateRecvTransport:self.nativeDevice listener:listener id:id iceParameters:iceParameters iceCandidates:iceCandidates dtlsParameters:dtlsParameters sctpParameters:sctpParameters nativePCOptions:self.nativePCOptions appData:appData];
-    
-    return [[[RecvTransport alloc] initWithNativeTransport:transport] autorelease];
+    return [DeviceWrapper nativeCreateRecvTransport:self.nativeDevice listener:listener
+        pcFactory:self.pcFactory id:id iceParameters:iceParameters iceCandidates:iceCandidates
+        dtlsParameters:dtlsParameters sctpParameters:sctpParameters
+        nativePCOptions:self.nativePCOptions appData:appData];
 }
 
 -(void)checkDeviceExists {
