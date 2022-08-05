@@ -1,5 +1,5 @@
 Pod::Spec.new do |spec|
-  spec.name         = "vl_mediasoup_client_ios"
+  spec.name         = "ah_mediasoup_client_ios"
   spec.version      = "1.5.20"
   spec.summary      = "Mediasoup 3 iOS Client"
 
@@ -12,7 +12,7 @@ Pod::Spec.new do |spec|
   spec.author       = { "Alexander Gorbunov" => "gorbunov.a@vlprojects.pro" }
   spec.platform     = :ios, "13.0"
   spec.source       = { :git => "https://github.com/ahmedbhesaniya97/mediasoup-ios-client.git", :tag => spec.version.to_s }
-  spec.module_name = "vl_mediasoup_client_ios"
+  spec.module_name = "ah_mediasoup_client_ios"
 
 	# Disable arc
   spec.requires_arc = false
